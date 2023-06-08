@@ -7,7 +7,7 @@
 
 # INSTRUCTIONS
 # NOTE this program needs to be run as root
-# requires `xprop | grep WM_CLASS` for setup and `xdotool` to auto move cursor to window.
+# requires `xprop | grep WM_CLASS` for setup and optional `xdotool` to auto move cursor to window.
 # also consider using xdotool as a mouse movement fallback in case you get stuck: `xdotool mousemove_relative -- x y`
 # you can get a list of device names by setting the debugging variable to `True`
 # NOTE if using steam controller make sure steam is open and desktop configuration is set to generic xbox 360 pad
@@ -75,7 +75,7 @@ def accel_curve(mouse_val: int, axis: str):
         # return 320 * mouse_val
         return ((mouse_val > 0) - (mouse_val < 0)) * ((250 * abs(mouse_val)) + 5000)
     elif axis == "Y":
-        return ((mouse_val > 0) - (mouse_val < 0)) * ((200 * abs(mouse_val)) + 3000)
+        return ((mouse_val > 0) - (mouse_val < 0)) * ((250 * abs(mouse_val)) + 5000)
 
 
 def handle_mouse_btn(event):  # TODO scroll wheel
@@ -116,9 +116,9 @@ for d in [evdev.InputDevice(path) for path in evdev.list_devices()]:
         print(d.path, d.name)
         print(d.capabilities(verbose=True), end="\n\n")
 
-    if d.name == controller_name:  # Valve Software Steam Controller, Valve Software Wired Controller
-        print("controller found")
-        controller = evdev.InputDevice(d.path)
+    # if d.name == controller_name:  # TODO old remove later
+    #     print("controller found")
+    #     controller = evdev.InputDevice(d.path)
     if d.name == mouse_name:
         print("mouse found")
         mouse = evdev.InputDevice(d.path)
@@ -130,7 +130,18 @@ devices = {dev.fd: dev for dev in [mouse, keyboard]}  # so select can read multi
 
 # TODO do we need to use a virtual controller? can we create on then just store it in code so users don't need a controller plugged in?
 print("creating virtual controller for mouse movement")
-virt_cont = evdev.UInput.from_device(controller, name="virtual_controller")
+# virt_cont = evdev.UInput.from_device(controller, name="virtual_controller")  # old method
+controller_mapping_dict: dict = {1: {304, 305, 307, 308, 310, 311, 314, 315, 316, 317, 318},
+                                 3: {(3, evdev.AbsInfo(value=0, min=-32767, max=32767, fuzz=16, flat=128, resolution=0)),
+                                     (1, evdev.AbsInfo(value=0, min=-32767, max=32767, fuzz=16, flat=128, resolution=0)),
+                                     (2, evdev.AbsInfo(value=0, min=0, max=255, fuzz=0, flat=0, resolution=0)),
+                                     (5, evdev.AbsInfo(value=0, min=0, max=255, fuzz=0, flat=0, resolution=0)),
+                                     (16, evdev.AbsInfo(value=0, min=-1, max=1, fuzz=0, flat=0, resolution=0)),
+                                     (4, evdev.AbsInfo(value=0, min=-32767, max=32767, fuzz=16, flat=128, resolution=0)),
+                                     (17, evdev.AbsInfo(value=0, min=-1, max=1, fuzz=0, flat=0, resolution=0)),
+                                     (0, evdev.AbsInfo(value=0, min=-32767, max=32767, fuzz=16, flat=128, resolution=0))}}
+virt_cont = evdev.UInput(events=controller_mapping_dict, name="virtual_controller")
+
 print("creating virtual keyboard for mouse buttons")
 virt_key = evdev.UInput.from_device(keyboard, name="virtual_keyboard")
 
